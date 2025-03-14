@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR 위치 확인</title>
+</head>
+<body>
+    <h2>QR 코드 스캔 완료! 위치를 확인 중...</h2>
+    <p id="message">위치를 가져오는 중입니다...</p>
+
+    <script>
+        const targetLatitude = 37.649908;   // 원하는 위치 (위도)
+        const targetLongitude = 126.914659; // 원하는 위치 (경도)
+        const allowedRadius = 50; // 허용 반경 (미터)
+
+        function sendLocation(latitude, longitude) {
+            fetch("https://your-server.com/api/location", { // 실제 서버 URL 입력
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    latitude: latitude,
+                    longitude: longitude,
+                    timestamp: new Date().toISOString()
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById("message").innerText = "✅ 위치 전송 완료!";
+            })
+            .catch(error => {
+                document.getElementById("message").innerText = "❌ 전송 실패: " + error;
+            });
+        }
+
+        function getDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371e3; // 지구 반지름 (미터)
+            const φ1 = lat1 * Math.PI / 180;
+            const φ2 = lat2 * Math.PI / 180;
+            const Δφ = (lat2 - lat1) * Math.PI / 180;
+            const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+            const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+                      Math.cos(φ1) * Math.cos(φ2) *
+                      Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+            return R * c; // 거리 (미터)
+        }
+
+        function checkLocation() {
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        let userLat = position.coords.latitude;
+                        let userLon = position.coords.longitude;
+                        let distance = getDistance(userLat, userLon, targetLatitude, targetLongitude);
+
+                        if (distance <= allowedRadius) {
+                            document.getElementById("message").innerText = "✅ 위치 확인 완료! 서버로 전송 중...";
+                            sendLocation(userLat, userLon);
+                        } else {
+                            document.getElementById("message").innerText = "❌ 지정된 위치에서만 사용 가능합니다!";
+                        }
+                    },
+                    (error) => {
+                        document.getElementById("message").innerText = "위치 정보 가져오기 실패: " + error.message;
+                    }
+                );
+            } else {
+                document.getElementById("message").innerText = "이 브라우저는 위치 서비스를 지원하지 않습니다.";
+            }
+        }
+
+        checkLocation();
+    </script>
+</body>
+</html>
